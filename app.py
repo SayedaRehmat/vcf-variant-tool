@@ -5,6 +5,7 @@ import pandas as pd
 import io
 from report_generator import generate_pdf
 
+# ─────────── Variant Annotation Logic ───────────
 def annotate_variant(chrom, pos, ref, alt):
     hgvs = f"{chrom}:g.{pos}{ref}>{alt}"
     url = f"https://myvariant.info/v1/variant/{hgvs}"
@@ -16,7 +17,6 @@ def annotate_variant(chrom, pos, ref, alt):
         data = res.json()
         clinvar = data.get('clinvar', {}).get('clinical_significance', 'NA')
         af = data.get('gnomad', {}).get('af', 0)
-
         rules = []
         if af is not None:
             if af < 0.0001:
@@ -43,6 +43,7 @@ def annotate_variant(chrom, pos, ref, alt):
     except Exception:
         return {'acmg': 'Error', 'clinvar': 'Error'}
 
+# ─────────── VCF File Parsing ───────────
 def parse_vcf(file_obj):
     reader = vcfpy.Reader(file_obj)
     records = []
@@ -66,52 +67,37 @@ def parse_vcf(file_obj):
         })
     return pd.DataFrame(records)
 
-st.set_page_config(page_title="VCF Annotator with Payment", layout="wide")
-st.title("🧬 VCF Variant Annotator + ACMG Classifier")
+# ─────────── Streamlit App ───────────
+st.set_page_config(page_title="VCF Lab Tool", layout="wide")
+st.title("🧬 Lab VCF Annotation Tool + Secure Login")
 
-st.markdown("Upload a `.vcf` file to classify variants using ClinVar & ACMG rules")
+# 🔒 Require login
+if "user" not in st.session_state:
+    st.warning("🔐 Please login first using `login.py`.")
+    st.stop()
 
-uploaded_file = st.file_uploader("Upload VCF File", type=["vcf"])
-access_code = st.text_input("🔒 Enter your access code (you’ll get it after payment)", type="password")
+st.success(f"Welcome, {st.session_state['user']}")
 
-if uploaded_file is not None:
+uploaded_file = st.file_uploader("Upload your `.vcf` file", type=["vcf"])
+
+if uploaded_file:
     try:
         with io.TextIOWrapper(uploaded_file, encoding='utf-8') as vcf_io:
             df = parse_vcf(vcf_io)
-            st.success("✅ File parsed successfully!")
+            st.session_state["df"] = df
+            st.success("✅ File processed successfully!")
             st.dataframe(df)
 
-            st.markdown("### 💳 Buy Annotated Report")
+            # Download CSV
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Download CSV", csv, "annotated_variants.csv")
 
-            st.markdown("""
-#### 🌍 International (USD)
-Pay with Card:  
-[![Buy Now](https://img.shields.io/badge/Buy%20Report-%249-blue?style=for-the-badge)](https://gumroad.com/l/vcfpay)
-
-#### 🇵🇰 Pakistan (PKR)
-Pay Rs. 250 to:
-
-- JazzCash: `0300-XXXXXXX`
-- EasyPaisa: `0301-XXXXXXX`
-- Bank Transfer: IBAN-XXXXXXXXXXXX
-
-📩 Send payment proof via WhatsApp: **+92-XXX-XXXXXXX**
-""")
-
-            if access_code == "vcf2025":
-                st.success("🔓 Access granted!")
-
-                csv = df.to_csv(index=False).encode('utf-8')
-                st.download_button("📥 Download CSV", csv, "annotated_variants.csv", "text/csv")
-
-                if st.button("📄 Generate PDF Report"):
-                    pdf_path = "clinical_report.pdf"
-                    generate_pdf(df, pdf_path)
-                    with open(pdf_path, "rb") as f:
-                        st.download_button("Download PDF", f, "clinical_report.pdf")
-            else:
-                st.warning("🔐 Downloads are locked. Pay to receive your access code.")
+            # Download PDF
+            if st.button("📄 Generate PDF"):
+                generate_pdf(df, "clinical_report.pdf")
+                with open("clinical_report.pdf", "rb") as f:
+                    st.download_button("Download PDF", f, "clinical_report.pdf")
     except Exception as e:
-        st.error(f"❌ Error: {e}")
+        st.error(f"❌ Error processing VCF: {e}")
 else:
-    st.info("📂 Please upload a `.vcf` file.")
+    st.info("📂 Upload a file to continue.")
