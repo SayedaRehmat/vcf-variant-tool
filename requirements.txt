@@ -1,4 +1,4 @@
-cyvcf2
+streamlit
+PyVCF
 requests
 pandas
-
