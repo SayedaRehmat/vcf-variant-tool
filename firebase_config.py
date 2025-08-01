@@ -1,0 +1,1 @@
+firebaseConfig = {'apiKey': 'AIzaSyALkMUjRdhrlmdeN9BMbPutBsamFiut8xk', 'authDomain': 'vcf-annotator.firebaseapp.com', 'projectId': 'vcf-annotator', 'storageBucket': 'vcf-annotator.firebasestorage.app', 'messagingSenderId': '842015001238', 'appId': '1:842015001238:web:b3b55dfe401dd3375610b7'}
