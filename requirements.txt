@@ -1,4 +1,4 @@
 streamlit
-PyVCF
 requests
 pandas
+vcfpy
