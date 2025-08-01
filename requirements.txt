@@ -1,1 +1,4 @@
+cyvcf2
+requests
+pandas
 
